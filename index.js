@@ -26,10 +26,18 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const reviewCollection = client.db('workwaveDB').collection('reviews')
+    const userCollection = client.db('workwaveDB').collection('users')
 
     app.get('/reviews', async(req,res)=>{
         const result = await reviewCollection.find().toArray()
         res.send(result)
+    })
+
+    // user related api
+    app.post("/users", async(req, res)=>{
+      const user = req.body
+      const result = await userCollection.insertOne(user)
+      res.send(result)
     })
 
 
