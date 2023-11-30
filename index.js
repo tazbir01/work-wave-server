@@ -30,59 +30,135 @@ async function run() {
     const userCollection = client.db('workwaveDB').collection('users')
 
     // jwt related api
-    app.post('/jwt', async(req,res)=>{
+    app.post('/jwt', async (req, res) => {
       const user = req.body
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET , {
-        expiresIn: '1hr'
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '1h'
       })
-      res.send({token})
+      res.send({ token })
     })
 
     // middleware
-    const verifyToken = (req,res, next)=>{
+    const verifyToken = (req, res, next) => {
       console.log("Indise verify token", req.headers)
-      if(!req.headers.authorization){
-        return res.status(401).send({message: "unauthorized access"})
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "unauthorized access" })
       }
-      const token = req.headers.authorization.split('')[1]
-      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded)=>{
-        if(error){
-          return res.status(401).send({message: 'forbidden access'})
+      const token = req.headers.authorization.split(' ')[1]
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+        if (error) {
+          return res.status(401).send({ message: 'unauthorized access' })
         }
         req.decoded = decoded
         next()
       })
     }
 
+    // verify admin
+    const verifyAdmin = async( req,res, next)=>{
+      const email = req.decoded.email
+      const query = { email: email}
+      const user = await userCollection.findOne(query)
+      const isAdmin = user?.role === "admin"
+      if(!isAdmin){
+        return res.status(403).send({message: "forbidden access"})
+      }
+      next()
+    }
+
+    // verify HR
+    const verifyHr = async (req, res, next) => {
+      const email = req.decoded.email
+      const query = { email: email }
+      const user = await userCollection.findOne(query)
+      const isHr = user?.role === "hr"
+      if (!isHr) {
+        return res.status(403).send({ message: "forbidden access" })
+      }
+      next()
+    }
+
     // review related api
-    app.get('/reviews', async(req,res)=>{
-        const result = await reviewCollection.find().toArray()
-        res.send(result)
+    app.get('/reviews', async (req, res) => {
+      const result = await reviewCollection.find().toArray()
+      res.send(result)
     })
 
     // user related api
-    app.post("/users", async(req, res)=>{
-      const user = req.body
+    app.get("/users",verifyToken, verifyAdmin, async (req, res) => {
+      console.log(req.headers)
+      const result = await userCollection.find().toArray()
+      res.send(result)
+    })
 
-      const query = {email: user.email}
+   
+
+    app.post("/users", async (req, res) => {
+      const user = req.body
+      const query = { email: user.email }
       const isExistingUser = await userCollection.findOne(query)
-      if(isExistingUser){
-        res.send({ message: "user already exists", insertedId: null})
+      
+      if (isExistingUser) {
+        return res.send({ message: "user already exists", insertedId: null })
       }
 
       const result = await userCollection.insertOne(user)
       res.send(result)
     })
 
-    app.get("/users", async(req,res)=>{
-      const result = await userCollection.find().toArray()
-      res.send(result)
+    // for hr
+    app.get('/users/hr/:email', verifyToken, async (req, res) => {
+      const email = req.params.email
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" })
+      }
+
+      const query = { email: email }
+      const user = await userCollection.findOne(query)
+      let hr = false
+      if (user) {
+        hr = user?.role === "hr"
+      }
+      res.send({ hr })
+    })
+
+    // admin api
+    app.get('/users/admin/:email',verifyToken, async (req, res) => {
+      const email = req.params.email
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" })
+      }
+
+      const query = { email: email }
+      const user = await userCollection.findOne(query)
+      let admin = false
+      if (user) {
+        admin = user?.role === "admin"
+      }
+      res.send({ admin })
     })
 
 
 
+    // app.get("/users/admin/:email",verifyToken, async(req,res)=>{
+    //   const email = req.params.email;
+    //   if(email !== req.decoded.email){
+    //     return res.status(403).send({message:"forbidden access"})
+    //   }
+
+    //   const query = {email: email}
+    //   const user = await userCollection.findOne(query)
+    //   let admin = false
+    //   if(user){
+    //     admin = user?.role === "admin"
+    //   }
+    //   res.send({admin})
+    // })
+
+
+
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
@@ -92,10 +168,10 @@ async function run() {
 run().catch(console.dir);
 
 
-app.get('/', (rea,res)=>{
-    res.send("Server is running")
+app.get('/', (rea, res) => {
+  res.send("Server is running")
 })
 
-app.listen(port, ()=>{
-    console.log(`server is running on port: ${port}`)
+app.listen(port, () => {
+  console.log(`server is running on port: ${port}`)
 })
