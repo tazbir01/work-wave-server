@@ -101,9 +101,32 @@ async function run() {
     })
 
     // user related api
-    app.get("/users",verifyToken,verifyAdminOrHr, async (req, res) => {
+    // app.get("/users",verifyToken,verifyAdminOrHr, async (req, res) => {
+    //   console.log(req.headers)
+    //   const result = await userCollection.find().toArray()
+    //   res.send(result)
+    // })
+
+    app.get("/users",verifyToken,verifyAdminOrHr, async(req,res)=>{
       console.log(req.headers)
-      const result = await userCollection.find().toArray()
+      const email = req.decoded.email
+      const query = {email: email}
+      const user = await userCollection.findOne(query)
+      const isAdmin = user?.role === "admin"
+      const isHr = user?.role === "hr"
+      const isEmployee = user?.role === "employee"
+
+      let filter = {}
+
+      if(isAdmin){
+        filter = {}
+      }else if(isHr){
+        filter = {role: "employee"}
+      }else if(isEmployee){
+        filter = {email: email}
+      }
+
+      const result = await userCollection.find(filter).toArray()
       res.send(result)
     })
 
