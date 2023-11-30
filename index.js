@@ -4,7 +4,7 @@ const cors = require('cors')
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
 app.use(cors())
@@ -129,6 +129,26 @@ async function run() {
       const result = await userCollection.find(filter).toArray()
       res.send(result)
     })
+
+
+    app.patch("/users/hr/:id",verifyToken, verifyAdminOrHr,async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)}
+      const user = await userCollection.findOne(filter)
+
+      const status = user.verify_status === "notverified" ? "verified" : "notverified"
+      const updateDoc = {
+        $set:{
+          verify_status: status
+        }
+      }
+
+      const result = await userCollection.updateOne(filter,updateDoc)
+      res.send(result)
+    })
+
+
+
 
     app.post("/users", async (req, res) => {
       const user = req.body
