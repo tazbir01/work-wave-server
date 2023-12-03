@@ -55,13 +55,13 @@ async function run() {
     }
 
     // verify admin
-    const verifyAdmin = async( req,res, next)=>{
+    const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email
-      const query = { email: email}
+      const query = { email: email }
       const user = await userCollection.findOne(query)
       const isAdmin = user?.role === "admin"
-      if(!isAdmin){
-        return res.status(403).send({message: "forbidden access"})
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" })
       }
       next()
     }
@@ -79,16 +79,16 @@ async function run() {
     }
 
     // verify admin or hr
-    const verifyAdminOrHr = async(req,res,next)=>{
+    const verifyAdminOrHr = async (req, res, next) => {
       const email = req.decoded.email
-      const query = {email:email}
+      const query = { email: email }
       const user = await userCollection.findOne(query)
       const isAdmin = user?.role === "admin"
       const isHr = user?.role === "hr"
-      if(isAdmin || isHr){
+      if (isAdmin || isHr) {
         next()
-      }else{
-        res.status(403).send({message: "forbidden access"})
+      } else {
+        res.status(403).send({ message: "forbidden access" })
       }
     }
 
@@ -107,10 +107,10 @@ async function run() {
     //   res.send(result)
     // })
 
-    app.get("/users",verifyToken,verifyAdminOrHr, async(req,res)=>{
+    app.get("/users", verifyToken, verifyAdminOrHr, async (req, res) => {
       console.log(req.headers)
       const email = req.decoded.email
-      const query = {email: email}
+      const query = { email: email }
       const user = await userCollection.findOne(query)
       const isAdmin = user?.role === "admin"
       const isHr = user?.role === "hr"
@@ -118,18 +118,18 @@ async function run() {
 
       let filter = {}
 
-      if(isAdmin){
-        filter ={
+      if (isAdmin) {
+        filter = {
           $or: [
-              { role: "employee", verify_status: "verified" },
-              { role: "hr" }
+            { role: "employee", verify_status: "verified" },
+            { role: "hr" }
           ]
-      };
+        };
 
-      }else if(isHr){
-        filter = {role: "employee"}
-      }else if(isEmployee){
-        filter = {email: email}
+      } else if (isHr) {
+        filter = { role: "employee" }
+      } else if (isEmployee) {
+        filter = { email: email }
       }
 
       const result = await userCollection.find(filter).toArray()
@@ -137,27 +137,27 @@ async function run() {
     })
 
 
-    app.get('/users/:id', async(req,res)=>{
+    app.get('/users/:id', async (req, res) => {
       const id = req.params.id
-      const filter = {_id: new ObjectId(id)}
+      const filter = { _id: new ObjectId(id) }
       const result = await userCollection.findOne(filter)
       res.send(result)
     })
 
 
-    app.patch("/users/hr/:id",verifyToken, verifyAdminOrHr,async(req,res)=>{
+    app.patch("/users/hr/:id", verifyToken, verifyAdminOrHr, async (req, res) => {
       const id = req.params.id;
-      const filter = {_id: new ObjectId(id)}
+      const filter = { _id: new ObjectId(id) }
       const user = await userCollection.findOne(filter)
 
       const status = user.verify_status === "notverified" ? "verified" : "notverified"
       const updateDoc = {
-        $set:{
+        $set: {
           verify_status: status
         }
       }
 
-      const result = await userCollection.updateOne(filter,updateDoc)
+      const result = await userCollection.updateOne(filter, updateDoc)
       res.send(result)
     })
 
@@ -168,7 +168,7 @@ async function run() {
       const user = req.body
       const query = { email: user.email }
       const isExistingUser = await userCollection.findOne(query)
-      
+
       if (isExistingUser) {
         return res.send({ message: "user already exists", insertedId: null })
       }
@@ -194,7 +194,7 @@ async function run() {
     })
 
     // admin api
-    app.get('/users/admin/:email',verifyToken, async (req, res) => {
+    app.get('/users/admin/:email', verifyToken, async (req, res) => {
       const email = req.params.email
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "forbidden access" })
@@ -207,6 +207,18 @@ async function run() {
         admin = user?.role === "admin"
       }
       res.send({ admin })
+    })
+
+    app.patch('/users/admin/:id',verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id)}
+      const updateDoc = {
+        $set: {
+          action: "fired"
+        }
+      }
+      const result = await userCollection.updateOne(query,updateDoc)
+      res.send(result)
     })
 
 
