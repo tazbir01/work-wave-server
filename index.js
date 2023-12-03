@@ -119,7 +119,13 @@ async function run() {
       let filter = {}
 
       if(isAdmin){
-        filter = {}
+        filter ={
+          $or: [
+              { role: "employee", verify_status: "verified" },
+              { role: "hr" }
+          ]
+      };
+
       }else if(isHr){
         filter = {role: "employee"}
       }else if(isEmployee){
