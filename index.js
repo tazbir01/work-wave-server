@@ -131,6 +131,14 @@ async function run() {
     })
 
 
+    app.get('/users/:id', async(req,res)=>{
+      const id = req.params.id
+      const filter = {_id: new ObjectId(id)}
+      const result = await userCollection.findOne(filter)
+      res.send(result)
+    })
+
+
     app.patch("/users/hr/:id",verifyToken, verifyAdminOrHr,async(req,res)=>{
       const id = req.params.id;
       const filter = {_id: new ObjectId(id)}
