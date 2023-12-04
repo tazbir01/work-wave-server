@@ -209,12 +209,26 @@ async function run() {
       res.send({ admin })
     })
 
-    app.patch('/users/admin/:id',verifyToken, verifyAdmin, async (req, res) => {
+    app.patch('/users/admin/fire/:id',verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id)}
       const updateDoc = {
         $set: {
           action: "fired"
+        }
+      }
+      const result = await userCollection.updateOne(query,updateDoc)
+      res.send(result)
+    })
+
+
+
+    app.patch('/users/admin/employeeToHr/:id',verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id)}
+      const updateDoc = {
+        $set: {
+          role: "hr"
         }
       }
       const result = await userCollection.updateOne(query,updateDoc)
